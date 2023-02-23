@@ -39,6 +39,10 @@ static int F_min = 15 , F_max = 80, Current_F = 55; // the focal in mm - can be 
 static unsigned long Current_dist = 150; // cm
 static double N_H;
 
+static double C_def;
+static double C_diffr;
+static double C_T;
+
 //diffraction const
 // marque (model) -captor type-size in mm - crop factor - coc=D/1730(limit of human eyes-coc=D/1440 more permissive and used everywhere  where D is the diagonal or sqrt (h2+w2)
 //Canon 	(40D, 350D, 400D, 450D, 1000D, 1100D) 	aps-c 	14,8 x 22,2	1,62	0,015	0,019
@@ -58,7 +62,9 @@ static  int diag = 1440; // std by default - to be less severe = 1440 (use for 0
 
 // See Jeff Conrad PDF at http://www.largeformatphotography.info/articles/DoFinDepth.pdf
 // & http://www.georgedouvos.com/douvos/OptimumCS-Pro_Optical_Science.html
-static double coc = 0.019;
+static double cocx = 0.019;
+static double coc;
+static int calc_w_diff = 1; // Boolean init to true
 static double N_Min, N_Max, Klambda, Delta_v;  
 static double RP; // idem Resolving Power
 static double magnify ; // page 6 conrad : c'est le rapport entre u, distance entre l'objet et la lentille  et v distance entre la lentille et le capteur ; m=v/u traduit en u-f=f/m => m=f/u-f
@@ -184,6 +190,8 @@ double Current_aperture_AV = 4.0; // to facilate the passage to next/previous ap
 // extra
  //long MyPalette [30];
     g_palettetype pal;
+
+
 
 double the_closest_aperture (double MyAperture)
 {
@@ -329,6 +337,18 @@ if (DistValue >= 10000.0) {Current_x_pixel=(Rule_Width + X_Rule_Position + Offse
 	
 	return(1);
 }
+
+
+void refresh_coc ()
+{
+		C_diffr = (Current_aperture*(1+magnify)/Klambda);
+		if (calc_w_diff) {
+					coc=sqrt((cocx*cocx) - (C_diffr*C_diffr));
+		}else{
+					coc=cocx;
+		};
+}
+
 
 // if movable == 0 then it is not possible to move all the rule
 void draw_dof_rule () // imagine to display from min to max and N_step is between left-right
@@ -514,17 +534,17 @@ void init_rule_dof()
 {
 
   Klambda = 1000000.0/(2.44*lgonde);
-	
-	long Current_dist_mm = ((focus_calc_focal_H (Current_F, 25.0, coc))/10)*10;
+ 	
+	long Current_dist_mm = (long) Current_dist*10.0; // ((focus_calc_focal_H (Current_F, 25.0, coc))/10)*10;
 	fprintf(stderr, "Init Focus Dist=%d\n", Current_dist_mm);
 	printf("Klambda=%f||", Klambda);
 	nbr_slot_intertick =  Rule_Width/Between_Tick_step; // 140.0
 	Nb_Pixel_in_slot = Between_Tick_step; // init 5 pixels
 	
 	N_H = (1000.0/Current_dist_mm); // in meter
-	Current_dist=(long) (Current_dist_mm/10); // in cm
+	//Current_dist=(long) (Current_dist_mm/10); // in cm
 	
-    double fd = Current_dist_mm/1000.0; // Current_dist / 100.0; // into meter
+  double fd = Current_dist_mm/1000.0; // Current_dist / 100.0; // into meter
 	double N_fd = N_H; //Current_dist;
 	int bottom_offset =  Rule_height;
 	int	top_offset = 15;
@@ -561,18 +581,14 @@ for (int i = 0; i<=nbr_slot_intertick;i++)
 	};
 }
 
-/*
-void draw_distance_range ()
-{
-	//the zero is the current_dist
-	// On the right, draw marker at 10 cm, 1 meter and so on
-	//idem on the left 
-	// take the rule mid-rule on pixel + (1/Currentdist - 1/ (Currentdist +10cm or -10cm), etc
-}
-*/
+
 void draw_current_aperture () 
 {
 		
+	//C_diffr = (Current_aperture*(1+magnify)/Klambda);
+	//coc=sqrt((cocx*cocx) - (C_diffr*C_diffr));
+	//coc=cocx;
+	
 	//Current_aperture
 	long ZeY= (int)(Slote_aperture_line*(1.0/(double)(Current_F*Current_F)) + Offset_aperture_line);
 	double Dnf=(double)Current_dist *(focus_calc_focal_H(Current_F, Current_aperture, coc)-Current_F)*10.0; // in mm // base for the string to display
@@ -602,7 +618,7 @@ void draw_current_aperture ()
 	// coc is the aim of total blur /// then we calculate the distances (near and far) where the real blur is lower than declared coc
 	// then calculate an objectif of blur spot in defocus to have the near and far limits of total
 	double Defocus_Blur_Aim = (coc*coc-Ze_Current_Diff_blur*Ze_Current_Diff_blur); // Focus & diffraction blur by approximation 
-	//ZZZ we assume that the current coc is coc, but may be not !!!
+	// we assume that the current coc is coc, but may be not !!!
 	
 
   
@@ -636,7 +652,7 @@ void draw_current_aperture ()
 			//printf("far-[Infinity");
 		};
 		setfillstyle(SOLID_FILL, WHITE);
-		// retired 5fev2023 bar(Screen_width/2+4, ZeY-4+Rule_height/2, Screen_width/2+40, ZeY+4+Rule_height/2);
+		// deleted 5fev2023 bar(Screen_width/2+4, ZeY-4+Rule_height/2, Screen_width/2+40, ZeY+4+Rule_height/2);
 		setfillstyle(SOLID_FILL, BLACK);
 		setcolor(YELLOW);
 		//setfontcolor (RED);
@@ -739,27 +755,18 @@ void draw_current_aperture ()
 	// line (Current_x_pixel, ZeY-6+Rule_height/2,Current_x2_pix ,ZeY-6+Rule_height/2); 
 		setcolor(RED);
 		// end of diffraction block
-			
-			
-//		Dn = Dnf/(focus_calc_focal_H(Current_F, Current_aperture, coc)+(Current_dist*10.0)-2*Current_F); // in mm
-
-		// test 
-//		setcolor(GREEN);
-//		inverse_N = (long)  (((N_last_left-(1000.0/Dn)) /Nb_N_in_slot)*Nb_Pixel_in_slot)+Offset+X_Rule_Position;  
-		//printf("Near-inverse=%d, - current=%d\n",inverse_N, Current_x_pixel);
-//		line (inverse_N, ZeY, inverse_N, ZeY+Rule_height);
 
 
 
 // or fun //XLC on vise un C_T avec C_defocus = 0.019 (/1440) 
 	// Dn & Df at last value are the diffraction one
-//	Delta_v=(((Dn1*Current_F)/(Dn1-Current_F))-((Df1*Current_F)/(Df1-Current_F))); //units in mm with DOF defocus only
+
 	Delta_v=(((Dn*Current_F)/(Dn-Current_F))-((Df*Current_F)/(Df-Current_F))); //units in mm // with defrac
-	double C_def = (Delta_v/(2*Current_aperture*(1+magnify)));
-	double C_diffr = (Current_aperture*(1+magnify)/Klambda);
+	C_def = (Delta_v/(2*Current_aperture*(1+magnify)));
+	C_diffr = (Current_aperture*(1+magnify)/Klambda);
 	// in fact best because when it is up to blur objectif (ie .019), the Defocus_Blur_Aim is negative - no sense
 	// take this one to display the blur induced and over the coc wanted
-	double C_T = sqrt((C_def*C_def)+(C_diffr*C_diffr));
+	C_T = sqrt((C_def*C_def)+(C_diffr*C_diffr));
 	N_Min=(sqrt((Klambda/2.0)*Delta_v))/(1+magnify); // normally multiply by 1/(1+m) m is the magnification, 0 is at infinity
 	// in fact here N_min taking into account the both blur (defocus & diffraction); In fact, each blur spot is equal
 	N_Max = (2*Klambda*coc)/(1+magnify); // mm with considering diffraction
@@ -768,8 +775,6 @@ void draw_current_aperture ()
 		RP= 2.0/sqrt((Ze_Current_Diff_blur*Ze_Current_Diff_blur)+Defocus_Blur_Aim);
 	//printf("DeltaV =%f && N Optimum =%f || Min =%f|| MAx=%f || abaq Max=%f and RP0.2=%f line pairs per mm \n", Delta_v, 20.0*sqrt(Delta_v), N_Min, N_Max, sqrt(0.019*Klambda*3.5), 0.2*RP);
 	RP=2.0/C_T; // in fact best because when it is up to blur objectif (ie .019), the Defocus_Blur_Aim is negative - no sense
-	//printf("Blur XC-Total=%f, XC-Diffract:%f**XC-Defocus objectif:%f--\nConrad Defocus:%f||Diffraction:%f||Total:%f**RP0.2:%f\n", sqrt((Ze_Current_Diff_blur*Ze_Current_Diff_blur)+Defocus_Blur_Aim),//always ==coc even if aim is negative
-		 //Ze_Current_Diff_blur, (Defocus_Blur_Aim>0)?sqrt(Defocus_Blur_Aim):0.0, C_def,C_diffr, C_T, 0.2*RP);
 
 		// afficher la part de diffraction en barre
 	setfillstyle(SOLID_FILL, CYAN);
@@ -788,7 +793,6 @@ void draw_current_aperture ()
   Delta_v=(((NearDist*Current_F)/(NearDist-Current_F))-((FarDist*Current_F)/(FarDist-Current_F))); //units in mm // with defrac
 
 			//units in mm =vf-vn ;  1/u+1/v = 1/f (eq DoFinDepth n°5) => v= uf/(u-f)
-//		Delta_v=(((10.0*NearDist*Current_F)/((10.0*NearDist)-Current_F))-((FarDist*10.0*Current_F)/((FarDist*10.0)-Current_F))); //units in mm // with defrac
 
 
 	 //printf("ancien magnify %g", magnify);
@@ -799,7 +803,7 @@ void draw_current_aperture ()
 	 C_diffr = (Current_aperture*(1+magnify)/Klambda);
 	 C_T = sqrt((C_def*C_def)+(C_diffr*C_diffr));
 
-if ((int)(10000*C_T)>(int)(10000*(coc+0.00002))) {
+if ((int)(10000*C_T)>(int)(10000*(cocx+0.00002))) {
 	setcolor(RED); // change YELLOW in RED
 	//Current_x_pixel_far ou _near
 	line (Screen_width/2, ZeY-8+Rule_height/2 ,Current_x_pixel_far_2 ,ZeY-8+Rule_height/2); // décalage line from without diffraction (coc) until without diffraction
@@ -847,7 +851,7 @@ if ((int)(10000*C_T)>(int)(10000*(coc+0.00002))) {
 	setfillstyle(SOLID_FILL, BLACK);
 	bar (Screen_width/2-35,Max_y_ecran+24,Screen_width/2+200,Max_y_ecran+35);
 	
-	if ((int)(10000*C_T)>(int)(10000*(coc+0.00002))) {
+	if ((int)(10000*C_T)>(int)(10000*(cocx+0.00002))) {
 	snprintf (inf_str, sizeof(inf_str), "coc total= %0.4f", C_T); 
 	setbkcolor(BLACK);
 	setcolor(YELLOW);
@@ -1052,7 +1056,7 @@ void draw_dof_values() //to display diffraction dist
 } // end draw_dof_values function
 
 
-// try to init values that not change alway to improve perf.
+// try to init values that not change always to improve perf.
 void init_Focals_HD ()
 {
 	int first_focal_reached = 0, last_lens_reached=0;
@@ -1396,6 +1400,9 @@ void GoToDist2 (double MyDist)
 			
 		};
 		magnify = Current_F/((Current_dist*10.0)-Current_F); //all units in mm
+
+	  refresh_coc ();
+	  
 		refresh_rule ();
 }
 
@@ -1440,7 +1447,7 @@ initgraph(&gdriver, &gmode, ""); // "RGBFULL_SCREEN");
   
   getpalette(&pal);
 
-    setrgbpalette(pal.colors[0], 0, 0, 0); // black
+  setrgbpalette(pal.colors[0], 0, 0, 0); // black
 	setrgbpalette(pal.colors[1], 0, 0, 255); // blue
 	setrgbpalette(pal.colors[2], 0, 255, 0); // green
 	setrgbpalette(pal.colors[3], 0, 255, 255); // cyan
@@ -1457,12 +1464,15 @@ initgraph(&gdriver, &gmode, ""); // "RGBFULL_SCREEN");
 
 
 	setfillstyle(SOLID_FILL, BLACK);
-init_rule_dof();
-//refresh_zoom ();
-init_Focals_HD();
-refresh_screen() ;
+	
+  init_rule_dof();
 
-c_pause='i'; 
+	refresh_coc ();
+
+  init_Focals_HD();
+  refresh_screen() ;
+
+  c_pause='i'; 
 
 	fprintf(stderr, "\n");
 	fprintf(stderr, "*** DOF simple equation : Red + Yellow lines : based on declared coc without diffraction impact****\n");		fprintf(stderr, "*** DOF : Red part : taking account the diffraction blur implying a new defocus blur such that in addition with,  we reach the declared coc (0,019 by default for Canon 700D\n") ; 
@@ -1541,7 +1551,7 @@ while (c_pause != 'q')
 		*/
 		printf ("Actual/Real current circle of total blur %g\n", sqrt(Delta_v/Klambda));
 
-	if (sqrt(Delta_v/Klambda) > coc)	{
+	if (sqrt(Delta_v/Klambda) > cocx)	{
 			printf ("Blur is greater than the declared coc of the camera \n");
 			// in http://www.largeformatphotography.info/articles/DoFinDepth.pdf, page 28, after eq 114, Conrad indicates that the optimum diameter of blur (which minimizes the blur) indicates
 			// kdiffraction = kdefocus and =  sqrt(Delta_v/2*Klambda) is optimum
@@ -1564,7 +1574,7 @@ while (c_pause != 'q')
 */
 			
 			// ratio such that f is fixed by multiply the ratio
-			double ratio = coc/sqrt(Delta_v/Klambda);
+			double ratio = cocx/sqrt(Delta_v/Klambda);
 			NewFocal=(int) (Current_F*ratio);
 			NewDelta_v=(((10.0*NearDist*NewFocal)/((10.0*NearDist)-NewFocal))-((FarDist*10.0*NewFocal)/((FarDist*10.0)-NewFocal))); //units in mm
 			Newmagnify = NewFocal/((MyDist*10.0)-NewFocal);
@@ -1572,9 +1582,9 @@ while (c_pause != 'q')
 			printf("We advise focal:%d and aperture:%f with reduction to reach the declared coc %g par %.2f%\n",NewFocal, (double)(sqrt((Klambda/2.0)*NewDelta_v))/(1+Newmagnify), coc, 100.0*ratio); //  to make it and to make the ratio old_F/new_F
 		};		
 		
-		double C_def = (Delta_v/(2*Current_aperture*(1+magnify)));
-		double C_diffr = (Current_aperture*(1+magnify)/Klambda);
-		double C_T = sqrt((C_def*C_def)+(C_diffr*C_diffr));
+		C_def = (Delta_v/(2*Current_aperture*(1+magnify)));
+		C_diffr = (Current_aperture*(1+magnify)/Klambda);
+		C_T = sqrt((C_def*C_def)+(C_diffr*C_diffr));
 
 		
 		printf("Dist=%d, Delta_v=%f, Aperture=%f, C_def = %g, C_diffr = %g, C_T=%f\n", MyDist, Delta_v, Current_aperture,C_def, C_diffr, C_T);
@@ -1589,16 +1599,16 @@ while (c_pause != 'q')
 	// à tester
 	
 		if (c_pause == 'c') {
-		int MyCoc;
-		fprintf(stderr, "entrez coc en nm\n");
-		fscanf(stdin, "%d", &MyCoc);
-		coc=(double)MyCoc/1000.0;
+		  int MyCoc;
+		  fprintf(stderr, "entrez coc en nm\n");
+		  fscanf(stdin, "%d", &MyCoc);
+		  cocx=(double)MyCoc/1000.0;
 	
-		setfillstyle(SOLID_FILL, BLACK);
-	init_rule_dof();
-	//refresh_zoom ();
-	init_Focals_HD();
-	refresh_screen() ;
+		  setfillstyle(SOLID_FILL, BLACK);
+	    init_rule_dof();
+	    refresh_coc ();
+	    init_Focals_HD();
+	    refresh_screen() ;
 	};
 	
 	if ((c_pause == 'd')|| (c_pause == 80))	{ // down by 1 focal
@@ -1615,13 +1625,16 @@ while (c_pause != 'q')
 	if (c_pause == 'p')  {N_Granularity*=2.0;	refresh_rule();}; // less ticks
 	
 	if ((c_pause == 'z')| (c_pause == '+')) {Zoom (14.0);}; // zoom in
-	if ((c_pause == 'y')| (c_pause == '-')) { Zoom (-1*14.0);};
+	if ((c_pause == 'y')| (c_pause == '-')) { Zoom (-1*14.0);}; // zoom out
+		
+	if (c_pause == 's') { if (calc_w_diff) calc_w_diff=0; else calc_w_diff=1; refresh_coc (); refresh_screen();};
 	if (c_pause == 'o') {
 		int MyApper;
 		fprintf(stderr, "entrez ouverture en dizaine (18=1.8)\n");
 		fscanf(stdin,"%d", &MyApper);
 		fprintf(stderr, "coucou=%f\n", (double)(MyApper/10.0));
 		Current_aperture=(double)(MyApper/10.0);
+		refresh_coc ();
 		refresh_rule();
 	};
 	
