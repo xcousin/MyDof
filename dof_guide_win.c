@@ -64,7 +64,7 @@ static  int diag = 1440; // std by default - to be less severe = 1440 (use for 0
 // & http://www.georgedouvos.com/douvos/OptimumCS-Pro_Optical_Science.html
 static double cocx = 0.019;
 static double coc;
-static int calc_w_diff = 1; // Boolean init to true
+static unsigned int calc_w_diff = 1; // Boolean init to true
 static double N_Min, N_Max, Klambda, Delta_v;  
 static double RP; // idem Resolving Power
 static double magnify ; // page 6 conrad : c'est le rapport entre u, distance entre l'objet et la lentille  et v distance entre la lentille et le capteur ; m=v/u traduit en u-f=f/m => m=f/u-f
@@ -131,7 +131,8 @@ struct Focal_Pixel
 	int pixel;
 	char text[5];
 };
-			
+		
+void init_Focals_HD ();
    
 //   AfterComma : min 1 max 8
 void _fl2str (float FlVal, short AfterComma, int flLen, char *data)
@@ -347,6 +348,7 @@ void refresh_coc ()
 		}else{
 					coc=cocx;
 		};
+		init_Focals_HD ();
 }
 
 
@@ -585,9 +587,6 @@ for (int i = 0; i<=nbr_slot_intertick;i++)
 void draw_current_aperture () 
 {
 		
-	//C_diffr = (Current_aperture*(1+magnify)/Klambda);
-	//coc=sqrt((cocx*cocx) - (C_diffr*C_diffr));
-	//coc=cocx;
 	
 	//Current_aperture
 	long ZeY= (int)(Slote_aperture_line*(1.0/(double)(Current_F*Current_F)) + Offset_aperture_line);
@@ -886,8 +885,6 @@ void display_Y_axis()
 			//};
 		};
 	}; // end if (F_max>F_min)
-		
-	//draw_linear_rule();
 
 }
 
@@ -957,8 +954,6 @@ void draw_dof_values() //to display diffraction dist
 		if ((values_aperture_full[i]>= aperture_min)&&(values_aperture_full[i]<= aperture_max)) { // if aperture is possible with the actual lens
 
 			setcolor(i+1); // to refer to graphics color : to vary the color per aperture
-			//setfontcolor(i+1);
-			//setcolor(rgb(rand() % 255, rand() % 255, rand() % 255));
 			
 			for (int j=0;j<index_lens;j++)  { // index_lens must be zero if a one value lens
 				My_N = (N_fd+HDs[i][j]);
@@ -1312,10 +1307,6 @@ void Scroll_V (int C_F)
 			refresh_screen();
 		};
 }
-void Zoom2 (double Coeff)
-{
-	long final_pixel, orig_pixel;
-}
 
 void Zoom (double Coeff)
 {
@@ -1470,28 +1461,30 @@ initgraph(&gdriver, &gmode, ""); // "RGBFULL_SCREEN");
 	refresh_coc ();
 
   init_Focals_HD();
-  refresh_screen() ;
+  
+  refresh_screen();
 
   c_pause='i'; 
 
 	fprintf(stderr, "\n");
-	fprintf(stderr, "*** DOF simple equation : Red + Yellow lines : based on declared coc without diffraction impact****\n");		fprintf(stderr, "*** DOF : Red part : taking account the diffraction blur implying a new defocus blur such that in addition with,  we reach the declared coc (0,019 by default for Canon 700D\n") ; 
-	fprintf(stderr, "*** DOF : Red part : based on a new defocus coc equal to declared coc (ex. 0,019) minus the diffraction one\n");
-	fprintf(stderr,"           not usefull if with the both lines yellow and red we have a total coc (defocus+diffraction) that \n");
-	fprintf(stderr,"               reaches already the declared coc****\n");
+	fprintf(stderr,"    by default we take into account in the equation, diffraction+defocus then only yellow lines\n");
+	fprintf(stderr, "*** DOF simple equation : Red + Yellow lines : based on declared coc without diffraction impact****\n");	
+	fprintf(stderr, "*** DOF : if Red part : taking account the diffraction blur implying a new defocus blur such that in addition with,  we reach the declared coc (0,019 by default for Canon 700D\n") ; 
+	fprintf(stderr, "*** DOF : if Red part : based on a new defocus coc equal to declared coc (ex. 0,019) minus the diffraction one\n");
 	//http://www.georgedouvos.com/douvos/OptimumCS-Pro_Optical_Science.html
-  fprintf(stderr, "|*********************** COMMANDES *************************|\n");
-	fprintf(stderr, "|m_ou_l -more ou less sticks                                |\n");
-	fprintf(stderr, "|a-dist proche&loin                                         |\n");
-	fprintf(stderr, "|i-rafraichir                                               |\n");
-	fprintf(stderr, "|g-positionner la distance                                  |\n");
-	fprintf(stderr, "|c-mettre coc, 0,019mm defaut                               |\n");
-	fprintf(stderr, "|           |           /|\\                                 |\n");
-	fprintf(stderr, "|d(own) or \\|/ and u(p)  | pour changer de focal            |\n");
-	fprintf(stderr, "|o pour ouverture                                           |\n");
-	fprintf(stderr, "|z_or + and _y or - pour (un)zoom                           |\n");
-	fprintf(stderr, "|<-- or l and --> or r : change distance at left or at right|\n");
-	fprintf(stderr, "|***********************************************************|\n");
+  fprintf(stderr, "|*********************** COMMANDES ***************************|\n");
+	fprintf(stderr, "|m_ou_l -more ou less sticks                                  |\n");
+	fprintf(stderr, "|a-dist proche&loin                                           |\n");
+	fprintf(stderr, "|i-rafraichir                                                 |\n");
+	fprintf(stderr, "|g-positionner la distance                                    |\n");
+	fprintf(stderr, "|c-mettre coc, 0,019mm defaut                                 |\n");
+	fprintf(stderr, "|           |           /|\\                                  |\n");
+	fprintf(stderr, "|d(own) or \\|/ and u(p)  | pour changer de focal             |\n");
+	fprintf(stderr, "|o pour ouverture                                             |\n");
+	fprintf(stderr, "|z_or + and _y or - pour (un)zoom                             |\n");
+	fprintf(stderr, "|<-- or l and --> or r : change distance at left or at right  |\n");
+	fprintf(stderr, "|s to switch total coc is only defocus or with diffraction    |\n");
+	fprintf(stderr, "|*************************************************************|\n");
 	fprintf(stderr, "\n");
 		
 while (c_pause != 'q')
@@ -1644,24 +1637,23 @@ while (c_pause != 'q')
 // the depth of focus for diffraction limited systems ??
 
 	fprintf(stderr, "\n");
-	fprintf(stderr, "*** DOF : Impact de la diffraction ****\n");
+  fprintf(stderr,"    by default we take into account in the equation, diffraction+defocus then only yellow lines\n");
 	fprintf(stderr, "*** DOF simple equation : Red + Yellow lines : based on declared coc without diffraction impact****\n");	
-	fprintf(stderr, "*** DOF : Red part : based on a new defocus coc equal to declared coc (ex. 0,019) minus the diffraction one\n");
-	fprintf(stderr,"           not usefull if with the both lines yellow and red we have a total coc (defocus+diffraction) that \n");
-	fprintf(stderr,"               reaches already the declared coc****\n");
-
-	fprintf(stderr, "|*********************** COMMANDES *************************|\n");
-	fprintf(stderr, "|m_ou_l -more ou less sticks                                |\n");
-	fprintf(stderr, "|a-dist proche&loin                                         |\n");
-	fprintf(stderr, "|i-rafraichir                                               |\n");
-	fprintf(stderr, "|g-positionner la distance                                  |\n");
-	fprintf(stderr, "|c-mettre coc, 0,019mm defaut                               |\n");
-	fprintf(stderr, "|           |           /|\\                                 |\n");
-	fprintf(stderr, "|d(own) or \\|/ and u(p)  | pour changer de focal            |\n");
-	fprintf(stderr, "|o pour ouverture                                           |\n");
-	fprintf(stderr, "|z_or + and _y or - pour (un)zoom                           |\n");
-	fprintf(stderr, "|<-- or l and --> or r : change distance at left or at right|\n");
-	fprintf(stderr, "|***********************************************************|\n");
+	fprintf(stderr, "*** DOF : if Red part : taking account the diffraction blur implying a new defocus blur such that in addition with,  we reach the declared coc (0,019 by default for Canon 700D\n") ; 
+	fprintf(stderr, "*** DOF : if Red part : based on a new defocus coc equal to declared coc (ex. 0,019) minus the diffraction one\n");
+	fprintf(stderr, "|*********************** COMMANDES ***************************|\n");
+	fprintf(stderr, "|m_ou_l -more ou less sticks                                  |\n");
+	fprintf(stderr, "|a-dist proche&loin                                           |\n");
+	fprintf(stderr, "|i-rafraichir                                                 |\n");
+	fprintf(stderr, "|g-positionner la distance                                    |\n");
+	fprintf(stderr, "|c-mettre coc, 0,019mm defaut                                 |\n");
+	fprintf(stderr, "|           |           /|\\                                  |\n");
+	fprintf(stderr, "|d(own) or \\|/ and u(p)  | pour changer de focal             |\n");
+	fprintf(stderr, "|o pour ouverture                                             |\n");
+	fprintf(stderr, "|z_or + and _y or - pour (un)zoom                             |\n");
+	fprintf(stderr, "|<-- or l and --> or r : change distance at left or at right  |\n");
+	fprintf(stderr, "|s to switch total coc is only defocus or with diffraction    |\n");
+	fprintf(stderr, "|*************************************************************|\n");
 	fprintf(stderr, "\n");
 	
 	c_pause=readkey();
