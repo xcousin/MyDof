@@ -705,6 +705,8 @@ void draw_current_aperture ()
 	setcolor(YELLOW);
 	//setfontcolor (RED);
 	Dn = Dnf/(focus_calc_focal_H(Current_F, Current_aperture, coc)+(Current_dist*10.0)-2*Current_F); // in mm
+	if (Dn < 0.0) Dn=0.0;
+		
 	Dn1=Dn;
 	 Current_x_pixel = (long)  (((N_last_left-(1000.0/Dn)) /Nb_N_in_slot)*Nb_Pixel_in_slot)+Offset+X_Rule_Position;
 	 //(int)(((N_last_left - (N_H+focus_calc_focal_N_H(Current_F, Current_aperture, coc)))/Nb_N_in_slot)*Nb_Pixel_in_slot)+Offset+X_Rule_Position;
@@ -737,6 +739,8 @@ void draw_current_aperture ()
 // diffraction display 
 	if (Defocus_Blur_Aim > 0) {
 		Dn = Dnf2/(focus_calc_focal_H(Current_F, Current_aperture, sqrt(Defocus_Blur_Aim))+(Current_dist*10.0)-2*Current_F); // in mm
+		if (Dn < 0.0) Dn=0.0;
+				
 		snprintf (inf_str, sizeof(inf_str), "%.3f", ((Current_dist*10.0)-Dn)/1000.0); //1/(N_H+focus_calc_focal_N_H(Current_F, Current_aperture)));// 1/N_H-   donc ici (s-1/(1/s+1/H))=s-Dn
 	};//else same value than dof
 		setcolor(RED);
@@ -759,8 +763,10 @@ void draw_current_aperture ()
 
 // or fun //XLC on vise un C_T avec C_defocus = 0.019 (/1440) 
 	// Dn & Df at last value are the diffraction one
-
+/*
 	Delta_v=(((Dn*Current_F)/(Dn-Current_F))-((Df*Current_F)/(Df-Current_F))); //units in mm // with defrac
+	if (Delta_v<0.0) Delta_v=0.0;
+		
 	C_def = (Delta_v/(2*Current_aperture*(1+magnify)));
 	C_diffr = (Current_aperture*(1+magnify)/Klambda);
 	// in fact best because when it is up to blur objectif (ie .019), the Defocus_Blur_Aim is negative - no sense
@@ -774,6 +780,8 @@ void draw_current_aperture ()
 		RP= 2.0/sqrt((Ze_Current_Diff_blur*Ze_Current_Diff_blur)+Defocus_Blur_Aim);
 	//printf("DeltaV =%f && N Optimum =%f || Min =%f|| MAx=%f || abaq Max=%f and RP0.2=%f line pairs per mm \n", Delta_v, 20.0*sqrt(Delta_v), N_Min, N_Max, sqrt(0.019*Klambda*3.5), 0.2*RP);
 	RP=2.0/C_T; // in fact best because when it is up to blur objectif (ie .019), the Defocus_Blur_Aim is negative - no sense
+*/
+
 
 		// afficher la part de diffraction en barre
 	setfillstyle(SOLID_FILL, CYAN);
@@ -789,7 +797,12 @@ void draw_current_aperture ()
   // 
   
  // printf("Dn = %f Df = %f\n", Dn, Df);
+ // This quantity, pronounced delta-v, is called the focus spread.
   Delta_v=(((NearDist*Current_F)/(NearDist-Current_F))-((FarDist*Current_F)/(FarDist-Current_F))); //units in mm // with defrac
+  printf("NearDist = %g \n",NearDist);
+  printf("FarDist = %g\n", FarDist);
+  	if (Delta_v<0.0) Delta_v=0.0;
+
  printf("Delta_V = %g \n", Delta_v); 
 			//units in mm Delta_v=vnear(vn)-vfar(vf) ;  1/u+1/v = 1/f (eq DoFinDepth n°5) => v= uf/(u-f)
 
