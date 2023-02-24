@@ -790,8 +790,8 @@ void draw_current_aperture ()
   
  // printf("Dn = %f Df = %f\n", Dn, Df);
   Delta_v=(((NearDist*Current_F)/(NearDist-Current_F))-((FarDist*Current_F)/(FarDist-Current_F))); //units in mm // with defrac
-
-			//units in mm =vf-vn ;  1/u+1/v = 1/f (eq DoFinDepth n°5) => v= uf/(u-f)
+ printf("Delta_V = %g \n", Delta_v); 
+			//units in mm Delta_v=vnear(vn)-vfar(vf) ;  1/u+1/v = 1/f (eq DoFinDepth n°5) => v= uf/(u-f)
 
 
 	 //printf("ancien magnify %g", magnify);
@@ -815,7 +815,9 @@ if ((int)(10000*C_T)>(int)(10000*(cocx+0.00002))) {
 	 printf("Current Dist= %d centimeter --- NearDist: %0.4f meter FarDist %0.4f meter - DeltaV_near %f-DeltaV_far %f\n",Current_dist, (double)NearDist/1000.0,(double)FarDist/1000.0,(double)((NearDist*Current_F)/(NearDist-Current_F)),(double)((FarDist*Current_F)/(FarDist-Current_F)) );
 	 printf("C_defocus : %g\n", C_def);
 	 printf("C_diffraction : %g\n", C_diffr);
-	 printf("Coc current: %g \n", C_T); 
+	 printf("Coc current Total : %g \n", C_T); 
+	 printf("Coc camera cocx : %g \n", cocx);
+	 printf("Coc defocus used for display : %g \n", coc);
 	 //snprintf (inf_str, sizeof(inf_str), "Coc current: %f ", C_T); 
 
 
@@ -855,7 +857,7 @@ if ((int)(10000*C_T)>(int)(10000*(cocx+0.00002))) {
 	setbkcolor(BLACK);
 	setcolor(YELLOW);
   outtextxy(Screen_width/2-35, Max_y_ecran+27,inf_str);
-	snprintf (inf_str, sizeof(inf_str), "%0.4f", coc); 
+	snprintf (inf_str, sizeof(inf_str), "%0.4f", cocx); 
 	setbkcolor(BLACK);
 	setcolor(RED);
   outtextxy(Screen_width/2+90, Max_y_ecran+27,inf_str);
