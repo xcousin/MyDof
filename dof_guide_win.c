@@ -34,7 +34,7 @@ static  double Min_dist = 10.0; // can not go down to 0.1m ex. : 10 cm of focus 
 static  double Percentage_Diffraction=0.0;
 
 
-static int F_min = 15 , F_max = 80, Current_F = 55; // the focal in mm - can be a lens with zoom // inherit
+static unsigned int F_min = 15 , F_max = 80, Current_F = 55; // the focal in mm - can be a lens with zoom // inherit
 //static int N_magnifier_Nb_Pixel_in_slot = 1;// in coefficient --> x0.1 means 1 stick for 1 meter indicates 1 stick for 10 cm 
 static unsigned long Current_dist = 150; // cm
 static double N_H;
@@ -65,6 +65,7 @@ static  int diag = 1440; // std by default - to be less severe = 1440 (use for 0
 static double cocx = 0.019;
 static double coc;
 static unsigned int calc_w_diff = 1; // Boolean init to true
+static unsigned int Flag_too_much_diffrac =0;
 static double N_Min, N_Max, Klambda, Delta_v;  
 static double RP; // idem Resolving Power
 static double magnify ; // page 6 conrad : c'est le rapport entre u, distance entre l'objet et la lentille  et v distance entre la lentille et le capteur ; m=v/u traduit en u-f=f/m => m=f/u-f
@@ -344,9 +345,19 @@ void refresh_coc ()
 {
 		C_diffr = (Current_aperture*(1+magnify)/Klambda);
 		if (calc_w_diff) {
-					coc=sqrt((cocx*cocx) - (C_diffr*C_diffr));
+				  if ((cocx*cocx) - (C_diffr*C_diffr) < 0.0) 
+				  	{fprintf(stderr, "ERROR coc negatif ; diffraction blur is too much \n"); 
+				  		coc=cocx;
+				  		Flag_too_much_diffrac = 1;
+				  		//calc_w_diff = 0;
+				  	}else { 
+						  coc=sqrt((cocx*cocx) - (C_diffr*C_diffr));
+						  Flag_too_much_diffrac = 0;
+						  
+					};
 		}else{
 					coc=cocx;
+					 Flag_too_much_diffrac = 1;
 		};
 		init_Focals_HD ();
 }
@@ -583,17 +594,82 @@ for (int i = 0; i<=nbr_slot_intertick;i++)
 	};
 }
 
+void show_bar_cocs ()
+{
+		char inf_str[25];
+		
+  //Percentage diffraction/defocus	changer le coc réelle et l'afficher
+  Percentage_Diffraction = 100.0* (C_diffr*C_diffr)/(C_T*C_T);
+  printf("percentage diffraction : %d\n", (int)Percentage_Diffraction);
+	setfillstyle(SOLID_FILL, BLACK);
+	snprintf (inf_str, sizeof(inf_str), "coc= %0.4f %.0f %%", C_diffr, Percentage_Diffraction); 
+	setbkcolor(BLACK);
+	setfillstyle(SOLID_FILL, BLACK);
+  bar (Screen_width/2-140,Max_y_ecran+10,Screen_width/2-60,Max_y_ecran+40);
+
+	if  (Flag_too_much_diffrac && calc_w_diff) {
+	setcolor(RED);
+}else{
+	setcolor (LIGHTGRAY);
+}
+  outtextxy(Screen_width/2-120, Max_y_ecran+10,inf_str);
+	if  (Flag_too_much_diffrac && calc_w_diff) {
+  	 snprintf (inf_str, sizeof(inf_str), "too much");
+  	 outtextxy(Screen_width/2-120, Max_y_ecran+20,inf_str);
+  	};
+  
+  if (Percentage_Diffraction > 100.0) Percentage_Diffraction=100.0;
+  setfillstyle(SOLID_FILL, LIGHTGRAY);
+  bar (Screen_width/2,Max_y_ecran+10,Screen_width/2+(int)Percentage_Diffraction,Max_y_ecran+20);
+	setfillstyle(SOLID_FILL, BLACK);
+
+
+  
+  Percentage_Diffraction = ((100.0* C_def*C_def)/ (C_T*C_T));
+	snprintf (inf_str, sizeof(inf_str), "%.0f %% coc=%0.4f", Percentage_Diffraction,C_def); //ZZZ
+	setbkcolor(BLACK);
+	
+		setcolor(YELLOW);
+
+  outtextxy(Screen_width/2+110, Max_y_ecran+10,inf_str);
+
+	setcolor(GREEN);
+  line(Screen_width/2+50,Max_y_ecran+10,Screen_width/2+50,Max_y_ecran+20);
+
+	setfillstyle(SOLID_FILL, BLACK);
+	bar (Screen_width/2-35,Max_y_ecran+24,Screen_width/2+200,Max_y_ecran+35);
+	
+	if ((int)(10000*C_T)>(int)(10000*(cocx+0.00002))) {
+	snprintf (inf_str, sizeof(inf_str), "coc total= %0.4f", C_T); 
+	setbkcolor(BLACK);
+	setcolor(YELLOW);
+  outtextxy(Screen_width/2-35, Max_y_ecran+27,inf_str);
+	snprintf (inf_str, sizeof(inf_str), "%0.4f", cocx); 
+	setbkcolor(BLACK);
+	setcolor(RED);
+  outtextxy(Screen_width/2+90, Max_y_ecran+27,inf_str);
+} else {
+	snprintf (inf_str, sizeof(inf_str), "coc total= %0.4f", C_T); 
+	setbkcolor(BLACK);
+	setcolor(YELLOW);
+  outtextxy(Screen_width/2-35, Max_y_ecran+27,inf_str);
+};
+}
 
 void draw_current_aperture () 
 {
-		
+		long Current_x2_pix=0;
+	char inf_str[25];
+
 	
 	//Current_aperture
 	long ZeY= (int)(Slote_aperture_line*(1.0/(double)(Current_F*Current_F)) + Offset_aperture_line);
 	double Dnf=(double)Current_dist *(focus_calc_focal_H(Current_F, Current_aperture, coc)-Current_F)*10.0; // in mm // base for the string to display
 	double Dn, Df, Dnf2, Dn1, Df1;
 	double NearDist, FarDist;
-	long Current_x_pixel_near, Current_x_pixel_near_2, Current_x_pixel_far, Current_x_pixel_far_2;
+	double Ze_Current_Diff_blur, Defocus_Blur_Aim;
+	
+	long Current_x_pixel, Current_x_pixel_near, Current_x_pixel_near_2, Current_x_pixel_far, Current_x_pixel_far_2;
 	
 	if ((1/(N_H-focus_calc_focal_N_H(Current_F, Current_aperture, coc))-1/N_H) >= 0.0) //on suppose N_H le 1/current_distance  dec 2017 donc ici (1/(1/s-1/H)-s) = Df-s
 			//Df=s(H-f)/(H-s) ou Dnf/(H-s)
@@ -602,21 +678,19 @@ void draw_current_aperture ()
 			Df = 10000000.0; // infinity
 	
 	Df1=Df;
-	long Current_x_pixel = (long)  (((N_last_left-(1000.0/Df)) /Nb_N_in_slot)*Nb_Pixel_in_slot)+Offset+X_Rule_Position; 
+	Current_x_pixel = (long)  (((N_last_left-(1000.0/Df)) /Nb_N_in_slot)*Nb_Pixel_in_slot)+Offset+X_Rule_Position; 
 	//(long)(((N_last_left - (N_H-focus_calc_focal_N_H(Current_F, Current_aperture, coc)))/Nb_N_in_slot)*Nb_Pixel_in_slot)+Offset+X_Rule_Position;
-	long Current_x2_pix=0;
-	char inf_str[25];
 	// double Dn, Df,Dnf, Dnf2;
 	
 	
 	// - 30dec attention rien à voir avec conrad qui ne parle pas de diag à 1440 ou 1730 mais de lgonde/1000000.0
-	double Ze_Current_Diff_blur = (1+magnify)*(Current_aperture*2.44*(lgonde/1000000.0));// /diag; // diffraction blur via some approximation in micron-meter
+	 Ze_Current_Diff_blur = (1+magnify)*(Current_aperture*2.44*(lgonde/1000000.0));// /diag; // diffraction blur via some approximation in micron-meter
 		//double C_diffr = (Current_aperture*(1+magnify)/Klambda);
 		//Klambda = 1000000.0/(2.44*lgonde);
 	
 	// coc is the aim of total blur /// then we calculate the distances (near and far) where the real blur is lower than declared coc
 	// then calculate an objectif of blur spot in defocus to have the near and far limits of total
-	double Defocus_Blur_Aim = (coc*coc-Ze_Current_Diff_blur*Ze_Current_Diff_blur); // Focus & diffraction blur by approximation 
+	Defocus_Blur_Aim = (coc*coc-Ze_Current_Diff_blur*Ze_Current_Diff_blur); // Focus & diffraction blur by approximation 
 	// we assume that the current coc is coc, but may be not !!!
 	
 
@@ -625,7 +699,7 @@ void draw_current_aperture ()
 
 	if (last_rule_y_position !=Max_y_ecran/2+4) {
 	setcolor(BLACK);
-	//line (X_Rule_Position, Max_y_ecran/2+4,Rule_Width+X_Rule_Position ,Max_y_ecran/2+4); //refresh
+	
 	line (X_Rule_Position, ZeY-6+Rule_height/2,Rule_Width+X_Rule_Position ,ZeY-6+Rule_height/2); // to refresh and delete the line assume that the black is the bg color
 	};
 	
@@ -635,37 +709,27 @@ void draw_current_aperture ()
 		line (Current_x_pixel,ZeY, Current_x_pixel,ZeY+Rule_height); // draw line on the larger on the rule at position of far	
 	
 	if (Current_x_pixel>=Screen_width) Current_x_pixel = X_Rule_Position+Rule_Width; //+Offset;
-		setcolor(YELLOW); // change RED en YELLOW
+		setcolor(YELLOW); 
 		line (Current_x_pixel, ZeY-6+Rule_height/2, Screen_width/2, ZeY-6+Rule_height/2);//horizontal line of dof dist inside the rule beginning always (of terminating) at mid-screen
 		
 		
 		if ((1/(N_H-focus_calc_focal_N_H(Current_F, Current_aperture, coc))-1/N_H) >= 0.0){ //on suppose N_H le 1/current_distance  dec 2017 donc ici (1/(1/s-1/H)-s) = Df-s
 			//Df=s(H-f)/(H-s) ou Dnf/(H-s)
-			//Df = Dnf/(focus_calc_focal_H(Current_F, Current_aperture, coc)-(Current_dist*10.0)); // in mm
+			
 			snprintf (inf_str, sizeof(inf_str), "%.3f", (Df-(Current_dist*10.0))/1000.0); // 1/(N_H-focus_calc_focal_N_H(Current_F, Current_aperture)) );//-1/N_H);
-			//printf("far-[%f", Df);
+			
 			FarDist = Df;
 		}else{
 			snprintf (inf_str, sizeof(inf_str), "inf");
 			FarDist = 100000;
-			//printf("far-[Infinity");
+			;
 		};
 		setfillstyle(SOLID_FILL, WHITE);
-		// deleted 5fev2023 bar(Screen_width/2+4, ZeY-4+Rule_height/2, Screen_width/2+40, ZeY+4+Rule_height/2);
+
 		setfillstyle(SOLID_FILL, BLACK);
 		setcolor(YELLOW);
-		//setfontcolor (RED);
-		//outtextxy(Screen_width/2+4, ZeY-15+Rule_height/2, inf_str);diff mais bug ?
 
-		
-		// test 
-		//setcolor(GREEN);
-			//Current_x_pixel = (long)(((N_last_left - (1.0/DistValue))/Nb_N_in_slot)*Nb_Pixel_in_slot)+Offset+X_Rule_Position; 
-
-		//long inverse_N = (long)  (((N_last_left-(1000.0/Df)) /Nb_N_in_slot)*Nb_Pixel_in_slot)+Offset+X_Rule_Position;  
-		//printf("Far-inverse=%d, - current=%d\n",inverse_N, Current_x_pixel);
-		//line (inverse_N, ZeY, inverse_N, ZeY+Rule_height);
-		
+				
 // diffraction display 		
 		Dnf2=0.0;
 		if (Defocus_Blur_Aim > 0) 
@@ -681,41 +745,42 @@ void draw_current_aperture ()
 		};
 	};
 		setcolor(RED);
-		// retired 5fev2023 outtextxy(Screen_width/2+4, ZeY-5+Rule_height/2, inf_str);
+		
 		
 		// diffraction aspect - 
 		if (Defocus_Blur_Aim > 0) { // Ze_Current_Diff_blur < coc
 			Current_x2_pix = (long)  (((N_last_left-(1000.0/Df)) /Nb_N_in_slot)*Nb_Pixel_in_slot)+Offset+X_Rule_Position; 
-			//(long)(((N_last_left - (N_H-focus_calc_focal_N_H(Current_F, Current_aperture, sqrt(Defocus_Blur_Aim))))/Nb_N_in_slot)*Nb_Pixel_in_slot)+Offset+X_Rule_Position;
 			if (Current_x2_pix>=Screen_width) Current_x2_pix = X_Rule_Position+Rule_Width; //+Offset;
 		} else {
-			Current_x2_pix=Screen_width/2;}; // else all is concerned but with a blur of Total_blur_delta-coc
+			Current_x2_pix=Screen_width/2;
+			}; // else all is concerned but with a blur of Total_blur_delta-coc
 			
 		setcolor(YELLOW);
 		
-		//not sure that it has a sense ZZZ diffraction !!YES or NOT ?
+		
 		 Current_x_pixel_far=Current_x_pixel;
 		 Current_x_pixel_far_2 = Current_x2_pix;
-			// line (Current_x_pixel, ZeY-6+Rule_height/2 ,Current_x2_pix ,ZeY-6+Rule_height/2); // décalage line from without diffraction (coc) until without diffraction
-		//setcolor(RED);
-		// end of diffraction block
+		// end of diffraction block for far distance
 	
 	
 	// near distance **********************************************************************************************
 	setcolor(YELLOW);
-	//setfontcolor (RED);
+
 	Dn = Dnf/(focus_calc_focal_H(Current_F, Current_aperture, coc)+(Current_dist*10.0)-2*Current_F); // in mm
+	
+	printf("to understand : Dnf : %f AND Dn %f \n", Dnf, Dn);
+	printf("to understand : with coc %g : focal_H %f  Current_F %f \n", (double)coc, (double)focus_calc_focal_H(Current_F, Current_aperture, coc), (double)Current_F);
+	
 	if (Dn < 0.0) Dn=0.0;
 		
 	Dn1=Dn;
 	 Current_x_pixel = (long)  (((N_last_left-(1000.0/Dn)) /Nb_N_in_slot)*Nb_Pixel_in_slot)+Offset+X_Rule_Position;
-	 //(int)(((N_last_left - (N_H+focus_calc_focal_N_H(Current_F, Current_aperture, coc)))/Nb_N_in_slot)*Nb_Pixel_in_slot)+Offset+X_Rule_Position;
-	//fprintf(stderr, "tartaat = %d\n", (int)(Slote_aperture_line*(1.0/(double)(Current_F*Current_F)) + Offset_aperture_line));
+
 	if ((Current_x_pixel > 0)&&(Current_x_pixel<Screen_width)) 
 		line (Current_x_pixel,ZeY,	Current_x_pixel,ZeY+Rule_height);
-//	if ((last_rule_y_position > Max_y_ecran/2) || (last_rule_y_position < Max_y_ecran/2+Rule_height)) {
+
 		if (Current_x_pixel <=0) Current_x_pixel = X_Rule_Position;
-		//line (Current_x_pixel, Max_y_ecran/2+4,Screen_width/2 ,Max_y_ecran/2+4);
+		
 		setcolor(YELLOW); // Change red en yellow
 		line (Current_x_pixel, ZeY-6+Rule_height/2,Screen_width/2 ,ZeY-6+Rule_height/2); //line of dof dist inside the rule
 		//Dn=s(H-f)/(H+s-2f) ou Dnf/(H+s-2f)
@@ -725,13 +790,9 @@ void draw_current_aperture ()
 					NearDist=Dn;
 
 		setfillstyle(SOLID_FILL, WHITE);
-		//setfontcolor (WHITE);
-		// retired 5fev2023 bar(Screen_width/2-40, ZeY-4+Rule_height/2, Screen_width/2-4, ZeY+4+Rule_height/2);
+
 		setfillstyle(SOLID_FILL, BLACK);
 		setcolor(YELLOW);
-		//setfontcolor (RED);
-		//outtextxy(Screen_width/2-40, ZeY-15+Rule_height/2, inf_str); diff mais bug ?
-//	};
 
 			
 		// diffraction aspect - 
@@ -744,13 +805,14 @@ void draw_current_aperture ()
 		snprintf (inf_str, sizeof(inf_str), "%.3f", ((Current_dist*10.0)-Dn)/1000.0); //1/(N_H+focus_calc_focal_N_H(Current_F, Current_aperture)));// 1/N_H-   donc ici (s-1/(1/s+1/H))=s-Dn
 	};//else same value than dof
 		setcolor(RED);
-		// retired 5fev2023 outtextxy(Screen_width/2-40, ZeY-5+Rule_height/2, inf_str);
+		// deleted 5fev2023 outtextxy(Screen_width/2-40, ZeY-5+Rule_height/2, inf_str);
 		if (Defocus_Blur_Aim > 0) { // Ze_Current_Diff_blur < coc
 			Current_x2_pix = (long)  (((N_last_left-(1000.0/Dn)) /Nb_N_in_slot)*Nb_Pixel_in_slot)+Offset+X_Rule_Position;
 			//(int)(((N_last_left - (N_H+focus_calc_focal_N_H(Current_F, Current_aperture, sqrt(Defocus_Blur_Aim))))/Nb_N_in_slot)*Nb_Pixel_in_slot)+Offset+X_Rule_Position;
 			if (Current_x2_pix <=0) Current_x2_pix = X_Rule_Position;
 		} else {
-			Current_x2_pix=Screen_width/2;}; // else all is concerned but with a blur of Total_blur_delta-coc
+			Current_x2_pix=Screen_width/2;
+			}; // else all is concerned but with a blur of Total_blur_delta-coc
 		setcolor(YELLOW);
 		//not sure that it has a sense ZZZ diffraction YES  or NOT
 		Current_x_pixel_near= Current_x_pixel;
@@ -759,28 +821,6 @@ void draw_current_aperture ()
 		setcolor(RED);
 		// end of diffraction block
 
-
-
-// or fun //XLC on vise un C_T avec C_defocus = 0.019 (/1440) 
-	// Dn & Df at last value are the diffraction one
-/*
-	Delta_v=(((Dn*Current_F)/(Dn-Current_F))-((Df*Current_F)/(Df-Current_F))); //units in mm // with defrac
-	if (Delta_v<0.0) Delta_v=0.0;
-		
-	C_def = (Delta_v/(2*Current_aperture*(1+magnify)));
-	C_diffr = (Current_aperture*(1+magnify)/Klambda);
-	// in fact best because when it is up to blur objectif (ie .019), the Defocus_Blur_Aim is negative - no sense
-	// take this one to display the blur induced and over the coc wanted
-	C_T = sqrt((C_def*C_def)+(C_diffr*C_diffr));
-	N_Min=(sqrt((Klambda/2.0)*Delta_v))/(1+magnify); // normally multiply by 1/(1+m) m is the magnification, 0 is at infinity
-	// in fact here N_min taking into account the both blur (defocus & diffraction); In fact, each blur spot is equal
-	N_Max = (2*Klambda*coc)/(1+magnify); // mm with considering diffraction
-	RP=0.0;
-//	if (Defocus_Blur_Aim > 0) 
-		RP= 2.0/sqrt((Ze_Current_Diff_blur*Ze_Current_Diff_blur)+Defocus_Blur_Aim);
-	//printf("DeltaV =%f && N Optimum =%f || Min =%f|| MAx=%f || abaq Max=%f and RP0.2=%f line pairs per mm \n", Delta_v, 20.0*sqrt(Delta_v), N_Min, N_Max, sqrt(0.019*Klambda*3.5), 0.2*RP);
-	RP=2.0/C_T; // in fact best because when it is up to blur objectif (ie .019), the Defocus_Blur_Aim is negative - no sense
-*/
 
 
 		// afficher la part de diffraction en barre
@@ -833,53 +873,8 @@ if ((int)(10000*C_T)>(int)(10000*(cocx+0.00002))) {
 	 printf("Coc defocus used for display : %g \n", coc);
 	 //snprintf (inf_str, sizeof(inf_str), "Coc current: %f ", C_T); 
 
+   show_bar_cocs ();
 
-  //Percentage diffraction/defocus	changer le coc réelle et l'afficher
-  Percentage_Diffraction = 100.0* (C_diffr*C_diffr)/(C_T*C_T);
-  printf("percentage diffraction : %d\n", (int)Percentage_Diffraction);
-	setfillstyle(SOLID_FILL, BLACK);
-	snprintf (inf_str, sizeof(inf_str), "coc= %0.4f %.0f %%", C_diffr, Percentage_Diffraction); 
-	setbkcolor(BLACK);
-	setcolor(LIGHTGRAY);
-  outtextxy(Screen_width/2-120, Max_y_ecran+10,inf_str);
-  
-  if (Percentage_Diffraction > 100.0) Percentage_Diffraction=100.0;
-  setfillstyle(SOLID_FILL, LIGHTGRAY);
-  bar (Screen_width/2,Max_y_ecran+10,Screen_width/2+(int)Percentage_Diffraction,Max_y_ecran+20);
-	setfillstyle(SOLID_FILL, BLACK);
-
-
-  
-  Percentage_Diffraction = ((100.0* C_def*C_def)/ (C_T*C_T));
-	snprintf (inf_str, sizeof(inf_str), "%.0f %% coc=%0.4f", Percentage_Diffraction,C_def); //ZZZ
-	setbkcolor(BLACK);
-	//if ((int)(10000*C_T)>(int)(10000*(coc+0.00002))) {
-		setcolor(YELLOW);
- 	//	} else {
-	//	setcolor(CYAN);};
-  outtextxy(Screen_width/2+110, Max_y_ecran+10,inf_str);
-
-	setcolor(GREEN);
-  line(Screen_width/2+50,Max_y_ecran+10,Screen_width/2+50,Max_y_ecran+20);
-
-	setfillstyle(SOLID_FILL, BLACK);
-	bar (Screen_width/2-35,Max_y_ecran+24,Screen_width/2+200,Max_y_ecran+35);
-	
-	if ((int)(10000*C_T)>(int)(10000*(cocx+0.00002))) {
-	snprintf (inf_str, sizeof(inf_str), "coc total= %0.4f", C_T); 
-	setbkcolor(BLACK);
-	setcolor(YELLOW);
-  outtextxy(Screen_width/2-35, Max_y_ecran+27,inf_str);
-	snprintf (inf_str, sizeof(inf_str), "%0.4f", cocx); 
-	setbkcolor(BLACK);
-	setcolor(RED);
-  outtextxy(Screen_width/2+90, Max_y_ecran+27,inf_str);
-} else {
-	snprintf (inf_str, sizeof(inf_str), "coc total= %0.4f", C_T); 
-	setbkcolor(BLACK);
-	setcolor(YELLOW);
-  outtextxy(Screen_width/2-35, Max_y_ecran+27,inf_str);
-}
 
 }
 
@@ -1475,7 +1470,7 @@ initgraph(&gdriver, &gmode, ""); // "RGBFULL_SCREEN");
 
 	refresh_coc ();
 
-  init_Focals_HD();
+  //init_Focals_HD(); // already inside refresh_coc
   
   refresh_screen();
 
@@ -1615,7 +1610,7 @@ while (c_pause != 'q')
 		  setfillstyle(SOLID_FILL, BLACK);
 	    init_rule_dof();
 	    refresh_coc ();
-	    init_Focals_HD();
+	    //init_Focals_HD();
 	    refresh_screen() ;
 	};
 	
@@ -1643,7 +1638,7 @@ while (c_pause != 'q')
 		fprintf(stderr, "coucou=%f\n", (double)(MyApper/10.0));
 		Current_aperture=(double)(MyApper/10.0);
 		refresh_coc ();
-		refresh_rule();
+		refresh_screen();
 	};
 	
 	fprintf(stderr, "\n");
