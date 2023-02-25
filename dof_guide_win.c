@@ -190,7 +190,7 @@ double Current_aperture = 4.0;
 double Current_aperture_AV = 4.0; // to facilate the passage to next/previous aperture
 
 // extra
- //long MyPalette [30];
+
     g_palettetype pal;
 
 
@@ -266,9 +266,8 @@ int show_tick_and_value(double DistValue, int SizeTick)
 if (DistValue < 0.0) return (1);
 if (DistValue >= 10000.0) {Current_x_pixel=(Rule_Width + X_Rule_Position + Offset); // infinity case
 	} else {
-	// I.calculate pixel position // Z !!!
+	// I.calculate pixel position 
 	Current_x_pixel = (long)(((N_last_left - (1.0/DistValue))/Nb_N_in_slot)*Nb_Pixel_in_slot)+Offset+X_Rule_Position; 
-	//long Current_x_pixel = ((long)(((N_last_left - N_H)/Nb_N_in_slot)*Nb_Pixel_in_slot))+Offset+X_Rule_Position;
 
 	
 	if (abs(CurrentPixelPosition - Current_x_pixel) <= Between_Tick_step) {
@@ -307,7 +306,7 @@ if (DistValue >= 10000.0) {Current_x_pixel=(Rule_Width + X_Rule_Position + Offse
 		}else {
 			snprintf (Dist_str, sizeof(Dist_str), "%.2f", DistValue);
 			sscanf (Dist_str, "%d.%1d%1d", &Entier, &ByTen, &ValueE);
-		//printf("DistValue=%f,Entier=%d, ByTen=%d, ValueE=%d\n", DistValue, Entier, ByTen, ValueE);
+		
 		if (ValueE==0 && ByTen==0) {
 			snprintf (Dist_str, sizeof(Dist_str), "%d", Entier);
 		} else {
@@ -407,7 +406,7 @@ NextPixelPositionL2=0;
 
 if (N_first_right == 0.0) { // infinity case
     Dist_from_N =  200.0;
-    //printf("draw_dof_rule then appel set_cycles\n");
+    //printf("draw_dof_rule then call set_cycles\n");
     Set_cycles(Dist_from_N);
     } else { // other than infinity
     Dist_from_N=(1.0/N_first_right);    
@@ -494,7 +493,7 @@ NextPixelPositionL1=0;
 NextPixelPositionL2=0;
 
 // reinit cycles according to the new value M or cycle1
-//printf("draw_dof_rule REINIT\n");
+
 Set_cycles (M);
 
 } //for  1
@@ -549,13 +548,12 @@ void init_rule_dof()
   Klambda = 1000000.0/(2.44*lgonde);
  	
 	long Current_dist_mm = (long) Current_dist*10.0; // ((focus_calc_focal_H (Current_F, 25.0, coc))/10)*10;
-	fprintf(stderr, "Init Focus Dist=%d\n", Current_dist_mm);
-	printf("Klambda=%f||", Klambda);
+	//fprintf(stderr, "Init Focus Dist=%d\n", Current_dist_mm);
+	//printf("Klambda=%f||", Klambda);
 	nbr_slot_intertick =  Rule_Width/Between_Tick_step; // 140.0
 	Nb_Pixel_in_slot = Between_Tick_step; // init 5 pixels
 	
 	N_H = (1000.0/Current_dist_mm); // in meter
-	//Current_dist=(long) (Current_dist_mm/10); // in cm
 	
   double fd = Current_dist_mm/1000.0; // Current_dist / 100.0; // into meter
 	double N_fd = N_H; //Current_dist;
@@ -600,7 +598,7 @@ void show_bar_cocs ()
 		
   //Percentage diffraction/defocus	changer le coc réelle et l'afficher
   Percentage_Diffraction = 100.0* (C_diffr*C_diffr)/(C_T*C_T);
-  printf("percentage diffraction : %d\n", (int)Percentage_Diffraction);
+  //printf("percentage diffraction : %d\n", (int)Percentage_Diffraction);
 	setfillstyle(SOLID_FILL, BLACK);
 	snprintf (inf_str, sizeof(inf_str), "coc= %0.4f %.0f %%", C_diffr, Percentage_Diffraction); 
 	setbkcolor(BLACK);
@@ -679,14 +677,8 @@ void draw_current_aperture ()
 	
 	Df1=Df;
 	Current_x_pixel = (long)  (((N_last_left-(1000.0/Df)) /Nb_N_in_slot)*Nb_Pixel_in_slot)+Offset+X_Rule_Position; 
-	//(long)(((N_last_left - (N_H-focus_calc_focal_N_H(Current_F, Current_aperture, coc)))/Nb_N_in_slot)*Nb_Pixel_in_slot)+Offset+X_Rule_Position;
-	// double Dn, Df,Dnf, Dnf2;
 	
-	
-	// - 30dec attention rien à voir avec conrad qui ne parle pas de diag à 1440 ou 1730 mais de lgonde/1000000.0
 	 Ze_Current_Diff_blur = (1+magnify)*(Current_aperture*2.44*(lgonde/1000000.0));// /diag; // diffraction blur via some approximation in micron-meter
-		//double C_diffr = (Current_aperture*(1+magnify)/Klambda);
-		//Klambda = 1000000.0/(2.44*lgonde);
 	
 	// coc is the aim of total blur /// then we calculate the distances (near and far) where the real blur is lower than declared coc
 	// then calculate an objectif of blur spot in defocus to have the near and far limits of total
@@ -715,9 +707,16 @@ void draw_current_aperture ()
 		
 		if ((1/(N_H-focus_calc_focal_N_H(Current_F, Current_aperture, coc))-1/N_H) >= 0.0){ //on suppose N_H le 1/current_distance  dec 2017 donc ici (1/(1/s-1/H)-s) = Df-s
 			//Df=s(H-f)/(H-s) ou Dnf/(H-s)
-			
-			snprintf (inf_str, sizeof(inf_str), "%.3f", (Df-(Current_dist*10.0))/1000.0); // 1/(N_H-focus_calc_focal_N_H(Current_F, Current_aperture)) );//-1/N_H);
-			
+			setfillstyle(SOLID_FILL, WHITE);
+			bar (Screen_width/2 + 10, ZeY-6+Rule_height/2,Screen_width/2 + 55, ZeY+6+Rule_height/2);
+			snprintf (inf_str, sizeof(inf_str), "<%.3f>", (Df-(Current_dist*10.0))/1000.0); // 1/(N_H-focus_calc_focal_N_H(Current_F, Current_aperture)) );//-1/N_H);
+			setcolor(BLACK); 
+			outtextxy (Screen_width/2 + 10, ZeY-6+Rule_height/2, inf_str);
+			snprintf (inf_str, sizeof(inf_str), "%.3f", Df/1000.0);
+			setfillstyle(SOLID_FILL, BLACK);
+			bar (Current_x_pixel-5, ZeY-20,Current_x_pixel + 50, ZeY-5);
+			setcolor(YELLOW);setbkcolor(YELLOW);
+			outtextxy(Current_x_pixel-5,ZeY-17, inf_str);
 			FarDist = Df;
 		}else{
 			snprintf (inf_str, sizeof(inf_str), "inf");
@@ -785,9 +784,18 @@ void draw_current_aperture ()
 		line (Current_x_pixel, ZeY-6+Rule_height/2,Screen_width/2 ,ZeY-6+Rule_height/2); //line of dof dist inside the rule
 		//Dn=s(H-f)/(H+s-2f) ou Dnf/(H+s-2f)
 		
-		snprintf (inf_str, sizeof(inf_str), "%.3f", ((Current_dist*10.0)-Dn)/1000.0); //1/(N_H+focus_calc_focal_N_H(Current_F, Current_aperture)));// 1/N_H-   donc ici (s-1/(1/s+1/H))=s-Dn
-					//printf("near %f]\n", (Dn));
-					NearDist=Dn;
+			setfillstyle(SOLID_FILL, WHITE);
+			bar (Screen_width/2 -60, ZeY-6+Rule_height/2,Screen_width/2-10, ZeY+6+Rule_height/2);
+  		snprintf (inf_str, sizeof(inf_str), "<%.3f>", ((Current_dist*10.0)-Dn)/1000.0); //1/(N_H+focus_calc_focal_N_H(Current_F, Current_aperture)));// 1/N_H-   donc ici (s-1/(1/s+1/H))=s-Dn
+			setcolor(BLACK); 
+			outtextxy (Screen_width/2 -60, ZeY-6+Rule_height/2, inf_str);
+			snprintf (inf_str, sizeof(inf_str), "%.3f", Dn/1000.0);
+			setfillstyle(SOLID_FILL, BLACK);
+			bar (Current_x_pixel-5, ZeY-20,Current_x_pixel + 40, ZeY-5);
+			setcolor(YELLOW);setbkcolor(YELLOW);
+			outtextxy(Current_x_pixel-5,ZeY-17, inf_str);
+
+		NearDist=Dn;
 
 		setfillstyle(SOLID_FILL, WHITE);
 
