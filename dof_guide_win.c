@@ -1412,7 +1412,7 @@ void GoToDist2 (double MyDist)
 
 	  refresh_coc ();
 	  
-		refresh_rule ();
+		refresh_screen ();
 }
 
 void GoToDist (double MyDist)
@@ -1432,8 +1432,57 @@ void GoToDist (double MyDist)
 	};
 }
 
+int ReadEntier (int to_show)
+{
+	char c_int='1';
+	int int_to_return =0;
+	char str_to_display[10];
+	
+	while ((int)c_int != 13) 
+	{
+	  c_int = readkey();
+	  if (c_int >= '0' && c_int <= '9')  
+	  {
+	  	int_to_return = int_to_return * 10 + atoi(&c_int);
+	  	if (to_show) {
+	  		snprintf (str_to_display, sizeof(str_to_display), "%d", int_to_return); 
+	  		outtextxy(270, 370, str_to_display);
+	  		};
+	  };
+	}
+	return int_to_return;
+}
+
+int Capture_entier(char *MyMessage)
+{
+	char Texte[50];
+
+		setfillstyle(SOLID_FILL, WHITE);
+		bar(250, 250, 700, 400);
+		snprintf (Texte, sizeof(Texte), MyMessage);
+		setcolor(BLACK);
+		outtextxy(270, 350, Texte);
+		return ReadEntier (1);
+}
+
+void MyAlert (char *MyMessage, int line, int init)
+{
+	  char Texte[50];
+	  if (init) {
+		 setfillstyle(SOLID_FILL, WHITE);
+		 bar(250, 250, 700, 400);
+		};
+		
+		snprintf (Texte, sizeof(Texte), MyMessage);
+		setcolor(BLACK);
+		outtextxy(270, 350+10*line, Texte);
+		readkey();
+}
+
 int Init ()
 {
+
+char Answer[2];
 
 printf("which the lower focal (example 15,35, 250, ...) ? \n");
 fscanf(stdin, "%d", &F_min);
@@ -1443,15 +1492,52 @@ printf("where set the current focal ? \n");
 
 fscanf(stdin, "%d", &Current_F);
 
+	printf( "\n");
+  printf("    by default we take into account in the equation diffraction+defocus then only yellow lines\n");	
+	printf( "*** DOF : if Red lines : \n");
+	printf( "             red lines is defocus+diffraction blur to reach camera coc;\n");
+	printf( "             yellow lines without taking account diffraction\n") ; 
+	printf( "|**************************************************************************|\n");
+	printf( "|***COMMANDS to type in graphical screen and values in command terminal****|\n");
+	printf( "|**************************************************************************|\n");
+	printf( "|m_ou_l -more ou less sticks                                               |\n");
+	printf( "|a-to choose near&far distance                                             |\n");
+	printf("|i-to refresh                                                              |\n");
+	printf( "|g-set a distance                                                          |\n");
+	printf( "|c-set a coc, 0,019mm by default                                           |\n");
+	printf( "|           |           /|\\                                                |\n");
+	printf( "|d(own) or \\|/ and u(p)  | to change the focal                             |\n");
+	printf( "|o set aperture                                                            |\n");
+	printf( "|z or '+' for zoom and y or '-' for unzoom                                 |\n");
+	printf( "|left arrow '<--' or l(eft); '-->' or r(ight) change dist at left, at right|\n");
+	printf( "|s to switch total coc is only defocus or with diffraction                 |\n");
+	printf( "|h to set hyperfocal  distance                                             |\n");
+	printf( "|**************************************************************************|\n");
+	printf( "\n");
+
+
+printf("in Full Screen or not ? y/n\n");
+
+fscanf(stdin, "%s", &Answer);
+printf(" reponse %s\n", &Answer[0]);
 
 //int gdriver=DETECT, gmode=0;
 int gdriver=VGA, gmode= GM_1024x768; //GM_800x600;
 char c_pause;
 	double delta;
 	int j=0;
+	char Alert [50];
 	//int MyDist;
+	
 
-initgraph(&gdriver, &gmode, ""); // "RGBFULL_SCREEN");
+if ((Answer[0] == 'y') || (Answer[0] == 'Y')) {
+
+	 initgraph(&gdriver, &gmode, "FULL_SCREEN");
+	} else {
+	 initgraph(&gdriver, &gmode, "");
+};
+
+		 // "RGBFULL_SCREEN");
 
   
   getpalette(&pal);
@@ -1491,14 +1577,14 @@ while (c_pause != 'q')
 
 	
 	j++;
-	fprintf(stderr,"j=%d||",j);
+	
 	if (c_pause == 'i')	{refresh_screen();}; //init
 	
 	if (c_pause == 'g') {
 		int MyDist;
-		fprintf(stderr, "entrez dist en cm\n");
-		fscanf(stdin, "%d", &MyDist);
-		fprintf(stderr, "coucou=%f\n", (double)(MyDist/100.0));
+		
+		MyDist = Capture_entier ("type distance in cm");
+		//fprintf(stderr, "coucou=%f\n", (double)(MyDist/100.0));
 		GoToDist2((double)(MyDist/100.0));
 	};
 	
@@ -1510,17 +1596,14 @@ while (c_pause != 'q')
 		double Best_coc,  NewDelta_v, Newmagnify;
 		
 		
-		fprintf(stderr, "entrez dist_near en cm\n");
-		fscanf(stdin, "%d", &NearDist);
-		fprintf(stderr, "entrez dist_far en cm\n");
-		fscanf(stdin, "%d", &FarDist);
+	  NearDist=Capture_entier ("type near distance in cm");
+	  FarDist=Capture_entier ("type far distance in cm");
 		
 		///calculate of an ideal
 		// remember : The object at distance u is real object in focus, the corresponded projected image is with distance v ; see figure 1 page 5
 		// see also http://www.georgedouvos.com/douvos/OptimumCS-Pro_Optical_Science.html
 		// have an impact on magnify (eq. DoFinDepth n°30 extrapoled to u ot=r deduced from n°29) NearDist ud and FarDist = uf ;
 		MyDist = (int)(2*NearDist*FarDist)/(NearDist+FarDist); 
-		
 		
 		
 		//units in mm =vf-vn ;  1/u+1/v = 1/f (eq DoFinDepth n°5) => v= uf/(u-f)
@@ -1530,8 +1613,11 @@ while (c_pause != 'q')
 		// normally multiply by 1/(1+m) m is the magnification, 0 is at infinity
 		// It is N_Min corresponding to eq (114) of Conrad at http://www.largeformatphotography.info/articles/DoFinDepth.pdf
 		Current_aperture=(double)(sqrt((Klambda/2.0)*Delta_v))/(1+magnify); //eq 114
+
+
+		snprintf(Alert, sizeof(Alert), "Aperture Conrad %.2f, closest=%.1f********", Current_aperture, the_closest_aperture(Current_aperture));
+		MyAlert(Alert, 0,1);
 		
-		printf("With Conrad equations we propose=%f, the closest(1/2,1/3 ou entire) =%.1f********", Current_aperture, the_closest_aperture(Current_aperture));
 		Current_aperture = the_closest_aperture(Current_aperture);
 		
 		
@@ -1544,7 +1630,9 @@ while (c_pause != 'q')
 		printf ("Actual/Real current circle of total blur %g\n", sqrt(Delta_v/Klambda));
 
 	if (sqrt(Delta_v/Klambda) > cocx)	{
-			printf ("Blur is greater than the declared coc of the camera \n");
+				snprintf(Alert, sizeof(Alert), "Blur is greater than declared camera coc %.3f", cocx);
+		MyAlert(Alert, 1,0);
+
 			// in http://www.largeformatphotography.info/articles/DoFinDepth.pdf, page 28, after eq 114, Conrad indicates that the optimum diameter of blur (which minimizes the blur) indicates
 			// kdiffraction = kdefocus and =  sqrt(Delta_v/2*Klambda) is optimum
 			// as kTotal*kTotal=kdiff*kdiff + kdefocus*kdefocus  (eq 112) then kTotal*kTotal = 2 * Delta_v/2*Klambda then kTotal = sqrt(Delta_v/Klambda) is optimum and we search that it reach inside our coc
@@ -1570,8 +1658,10 @@ while (c_pause != 'q')
 			NewFocal=(int) (Current_F*ratio);
 			NewDelta_v=(((10.0*NearDist*NewFocal)/((10.0*NearDist)-NewFocal))-((FarDist*10.0*NewFocal)/((FarDist*10.0)-NewFocal))); //units in mm
 			Newmagnify = NewFocal/((MyDist*10.0)-NewFocal);
-			
-			printf("We advise focal:%d and aperture:%f with reduction to reach the declared coc %g par %.2f%\n",NewFocal, (double)(sqrt((Klambda/2.0)*NewDelta_v))/(1+Newmagnify), coc, 100.0*ratio); //  to make it and to make the ratio old_F/new_F
+
+
+			snprintf(Alert, sizeof(Alert),"Advise focal:%d aperture:%.2f reduced by %.2f%\n",NewFocal, (double)(sqrt((Klambda/2.0)*NewDelta_v))/(1+Newmagnify), 100.0*ratio); //  to make it and to make the ratio old_F/new_F
+		MyAlert(Alert, 2,0);
 		};		
 		
 		C_def = (Delta_v/(2*Current_aperture*(1+magnify)));
@@ -1592,8 +1682,7 @@ while (c_pause != 'q')
 	
 		if (c_pause == 'c') {
 		  int MyCoc;
-		  fprintf(stderr, "entrez coc en nm\n");
-		  fscanf(stdin, "%d", &MyCoc);
+  	  MyCoc=Capture_entier ("type coc in nm : 19 for 0.019");
 		  cocx=(double)MyCoc/1000.0;
 	
 		  setfillstyle(SOLID_FILL, BLACK);
@@ -1602,6 +1691,14 @@ while (c_pause != 'q')
 	    //init_Focals_HD();
 	    refresh_screen() ;
 	};
+
+  if (c_pause == 'h') // set to hyperfocale
+  	{
+  		// 		GoToDist2((double)(MyDist/100.0));
+
+  		printf("test Hyperfocale in mm %d \n", focus_calc_focal_H(Current_F, Current_aperture, coc));
+  		GoToDist2((double)(focus_calc_focal_H(Current_F, Current_aperture, coc)/1000.0));
+  	};
 	
 	if ((c_pause == 'd')|| (c_pause == 80))	{ // down by 1 focal
 		Scroll_V(Current_F+1);
@@ -1622,9 +1719,8 @@ while (c_pause != 'q')
 	if (c_pause == 's') { if (calc_w_diff) calc_w_diff=0; else calc_w_diff=1; refresh_coc (); refresh_screen();};
 	if (c_pause == 'o') {
 		int MyApper;
-		fprintf(stderr, "entrez ouverture en dizaine (18=1.8)\n");
-		fscanf(stdin,"%d", &MyApper);
-		fprintf(stderr, "coucou=%f\n", (double)(MyApper/10.0));
+		MyApper=Capture_entier ("type aperture in tens: 18 for 1.8");
+
 		Current_aperture=(double)(MyApper/10.0);
 		refresh_coc ();
 		refresh_screen();
@@ -1654,6 +1750,7 @@ while (c_pause != 'q')
 	fprintf(stderr, "|z or '+' for zoom and y or '-' for unzoom                                 |\n");
 	fprintf(stderr, "|left arrow '<--' or l(eft); '-->' or r(ight) change dist at left, at right|\n");
 	fprintf(stderr, "|s to switch total coc is only defocus or with diffraction                 |\n");
+	fprintf(stderr, "|h to set hyperfocal  distance                                             |\n");
 	fprintf(stderr, "|**************************************************************************|\n");
 	fprintf(stderr, "\n");
 	
