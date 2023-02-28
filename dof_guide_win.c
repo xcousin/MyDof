@@ -1591,7 +1591,7 @@ while (c_pause != 'q')
 	if (c_pause == 'a') {
 		int NearDist, FarDist, MyDist;
 		double Discriminant, X1, X2;
-		double Aper1, Aper2;
+		double Aper1, Aper2, New_aperture;
 		int NewFocal, BestFocal;
 		double Best_coc,  NewDelta_v, Newmagnify;
 		
@@ -1631,37 +1631,44 @@ while (c_pause != 'q')
 
 	if (sqrt(Delta_v/Klambda) > cocx)	{
 				snprintf(Alert, sizeof(Alert), "Blur is greater than declared camera coc %.3f", cocx);
-		MyAlert(Alert, 1,0);
+				MyAlert(Alert, 1,0);
 
 			// in http://www.largeformatphotography.info/articles/DoFinDepth.pdf, page 28, after eq 114, Conrad indicates that the optimum diameter of blur (which minimizes the blur) indicates
 			// kdiffraction = kdefocus and =  sqrt(Delta_v/2*Klambda) is optimum
 			// as kTotal*kTotal=kdiff*kdiff + kdefocus*kdefocus  (eq 112) then kTotal*kTotal = 2 * Delta_v/2*Klambda then kTotal = sqrt(Delta_v/Klambda) is optimum and we search that it reach inside our coc
 	
-	/*		
+			
 		//
 		// F=10 is always the best ...
 		//
-			Best_coc = coc;
-			for (NewFocal=10;NewFocal<400;NewFocal++) {
-				//printf("iteration %d\n",NewFocal);
+			Best_coc = cocx;
+			BestFocal=0;
+			for (NewFocal=Current_F-1;NewFocal>10;NewFocal--) {
+				printf("iteration %d\n",NewFocal);
 				NewDelta_v=(((10.0*NearDist*NewFocal)/((10.0*NearDist)-NewFocal))-((FarDist*10.0*NewFocal)/((FarDist*10.0)-NewFocal))); 
-				if (sqrt(NewDelta_v/Klambda) < Best_coc) {Best_coc=sqrt(NewDelta_v/Klambda);BestFocal=NewFocal;};
-				//Newmagnify = Current_F/((MyDist*10.0)-NewFocal); // equation DoFinDepth n°8 : u-f=f/m => m = f/(u-f)
-				//New_aperture=(double)(sqrt((Klambda/2.0)*NewDelta_v))/(1+Newmagnify);
-		};
+				if (sqrt(NewDelta_v/Klambda) <= Best_coc) {Best_coc=sqrt(NewDelta_v/Klambda);BestFocal=NewFocal;};
+				};
+				if (BestFocal != 0) {
+				Newmagnify = BestFocal/((MyDist*10.0)-BestFocal); // equation DoFinDepth n°8 : u-f=f/m => m = f/(u-f)
+				New_aperture=(double)(sqrt((Klambda/2.0)*NewDelta_v))/(1+Newmagnify);
+			};
 			printf("test Focal best Best-coc=%g at best_F=%d\n",Best_coc, BestFocal);
 
-*/
+/*
 			
 			// ratio such that f is fixed by multiply the ratio
 			double ratio = cocx/sqrt(Delta_v/Klambda);
+			
 			NewFocal=(int) (Current_F*ratio);
+			
 			NewDelta_v=(((10.0*NearDist*NewFocal)/((10.0*NearDist)-NewFocal))-((FarDist*10.0*NewFocal)/((FarDist*10.0)-NewFocal))); //units in mm
+			
 			Newmagnify = NewFocal/((MyDist*10.0)-NewFocal);
+*/
 
-
-			snprintf(Alert, sizeof(Alert),"Advise focal:%d aperture:%.2f reduced by %.2f%\n",NewFocal, (double)(sqrt((Klambda/2.0)*NewDelta_v))/(1+Newmagnify), 100.0*ratio); //  to make it and to make the ratio old_F/new_F
-		MyAlert(Alert, 2,0);
+			snprintf(Alert, sizeof(Alert),"Advise focal:%d aperture:%.2f\n",BestFocal, New_aperture); 
+			//(double)(sqrt((Klambda/2.0)*NewDelta_v))/(1+Newmagnify), 100.0*ratio); //  to make it and to make the ratio old_F/new_F
+		  MyAlert(Alert, 2,0);
 		};		
 		
 		C_def = (Delta_v/(2*Current_aperture*(1+magnify)));
