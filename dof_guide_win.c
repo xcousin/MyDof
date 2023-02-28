@@ -1629,8 +1629,8 @@ while (c_pause != 'q')
 		*/
 		printf ("Actual/Real current circle of total blur %g\n", sqrt(Delta_v/Klambda));
 
-	if (sqrt(Delta_v/Klambda) > cocx)	{
-				snprintf(Alert, sizeof(Alert), "Blur is greater than declared camera coc %.3f", cocx);
+	if (1000.0*((int)sqrt(Delta_v/Klambda)/1000.0) > cocx)	{
+				snprintf(Alert, sizeof(Alert), "Blur %.3f is greater than camera coc %.3f", sqrt(Delta_v/Klambda), cocx);
 				MyAlert(Alert, 1,0);
 
 			// in http://www.largeformatphotography.info/articles/DoFinDepth.pdf, page 28, after eq 114, Conrad indicates that the optimum diameter of blur (which minimizes the blur) indicates
@@ -1639,19 +1639,21 @@ while (c_pause != 'q')
 	
 			
 		//
-		// F=10 is always the best ...
+		//  ...
 		//
 			Best_coc = cocx;
 			BestFocal=0;
-			for (NewFocal=Current_F-1;NewFocal>10;NewFocal--) {
-				printf("iteration %d\n",NewFocal);
+			NewFocal=Current_F-1;
+			NewDelta_v=(((10.0*NearDist*NewFocal)/((10.0*NearDist)-NewFocal))-((FarDist*10.0*NewFocal)/((FarDist*10.0)-NewFocal))); 
+			while ((NewFocal>10) && (sqrt(NewDelta_v/Klambda) > cocx)) {
+				NewFocal--;
 				NewDelta_v=(((10.0*NearDist*NewFocal)/((10.0*NearDist)-NewFocal))-((FarDist*10.0*NewFocal)/((FarDist*10.0)-NewFocal))); 
-				if (sqrt(NewDelta_v/Klambda) <= Best_coc) {Best_coc=sqrt(NewDelta_v/Klambda);BestFocal=NewFocal;};
-				};
-				if (BestFocal != 0) {
-				Newmagnify = BestFocal/((MyDist*10.0)-BestFocal); // equation DoFinDepth n°8 : u-f=f/m => m = f/(u-f)
-				New_aperture=(double)(sqrt((Klambda/2.0)*NewDelta_v))/(1+Newmagnify);
+				printf("iteration %d blur coc %.3f\n",NewFocal, sqrt(NewDelta_v/Klambda));
 			};
+			Best_coc=sqrt(NewDelta_v/Klambda);
+			BestFocal=NewFocal;
+			Newmagnify = BestFocal/((MyDist*10.0)-BestFocal); // equation DoFinDepth n°8 : u-f=f/m => m = f/(u-f)
+			New_aperture=(double)(sqrt((Klambda/2.0)*NewDelta_v))/(1+Newmagnify);
 			printf("test Focal best Best-coc=%g at best_F=%d\n",Best_coc, BestFocal);
 
 /*
