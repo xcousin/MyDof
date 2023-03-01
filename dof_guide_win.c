@@ -1629,7 +1629,7 @@ while (c_pause != 'q')
 		*/
 		printf ("Actual/Real current circle of total blur %g\n", sqrt(Delta_v/Klambda));
 
-	if (1000.0*((int)sqrt(Delta_v/Klambda)/1000.0) > cocx)	{
+	if (sqrt(Delta_v/Klambda) > cocx)	{
 				snprintf(Alert, sizeof(Alert), "Blur %.3f is greater than camera coc %.3f", sqrt(Delta_v/Klambda), cocx);
 				MyAlert(Alert, 1,0);
 
