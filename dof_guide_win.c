@@ -1645,10 +1645,11 @@ while (c_pause != 'q')
 			BestFocal=0;
 			NewFocal=Current_F-1;
 			NewDelta_v=(((10.0*NearDist*NewFocal)/((10.0*NearDist)-NewFocal))-((FarDist*10.0*NewFocal)/((FarDist*10.0)-NewFocal))); 
+			printf("iteration %d blur coc %f\n",NewFocal, sqrt(NewDelta_v/Klambda));
 			while ((NewFocal>10) && (sqrt(NewDelta_v/Klambda) > cocx)) {
 				NewFocal--;
 				NewDelta_v=(((10.0*NearDist*NewFocal)/((10.0*NearDist)-NewFocal))-((FarDist*10.0*NewFocal)/((FarDist*10.0)-NewFocal))); 
-				printf("iteration %d blur coc %.3f\n",NewFocal, sqrt(NewDelta_v/Klambda));
+				printf("iteration %d blur coc %f\n",NewFocal, sqrt(NewDelta_v/Klambda));
 			};
 			Best_coc=sqrt(NewDelta_v/Klambda);
 			BestFocal=NewFocal;
