@@ -1645,11 +1645,11 @@ while (c_pause != 'q')
 			BestFocal=0;
 			NewFocal=Current_F-1;
 			NewDelta_v=(((10.0*NearDist*NewFocal)/((10.0*NearDist)-NewFocal))-((FarDist*10.0*NewFocal)/((FarDist*10.0)-NewFocal))); 
-			printf("iteration %d blur coc %f\n",NewFocal, sqrt(NewDelta_v/Klambda));
+			//printf("iteration %d blur coc %f\n",NewFocal, sqrt(NewDelta_v/Klambda));
 			while ((NewFocal>10) && (sqrt(NewDelta_v/Klambda) > cocx)) {
 				NewFocal--;
 				NewDelta_v=(((10.0*NearDist*NewFocal)/((10.0*NearDist)-NewFocal))-((FarDist*10.0*NewFocal)/((FarDist*10.0)-NewFocal))); 
-				printf("iteration %d blur coc %f\n",NewFocal, sqrt(NewDelta_v/Klambda));
+				//printf("iteration %d blur coc %f\n",NewFocal, sqrt(NewDelta_v/Klambda));
 			};
 			Best_coc=sqrt(NewDelta_v/Klambda);
 			BestFocal=NewFocal;
@@ -1672,6 +1672,9 @@ while (c_pause != 'q')
 			snprintf(Alert, sizeof(Alert),"Advise focal:%d aperture:%.2f\n",BestFocal, New_aperture); 
 			//(double)(sqrt((Klambda/2.0)*NewDelta_v))/(1+Newmagnify), 100.0*ratio); //  to make it and to make the ratio old_F/new_F
 		  MyAlert(Alert, 2,0);
+			snprintf(Alert, sizeof(Alert),"Set distance range with total coc %0.3f\n",cocx); 
+			//(double)(sqrt((Klambda/2.0)*NewDelta_v))/(1+Newmagnify), 100.0*ratio); //  to make it and to make the ratio old_F/new_F
+		  MyAlert(Alert, 3,0);
 		};		
 		
 		C_def = (Delta_v/(2*Current_aperture*(1+magnify)));
